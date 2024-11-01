@@ -272,7 +272,7 @@ function check_windows_exists() {
     if [[ $WAFLAVOR == "libvirt" ]]; then
         # Check Virtual Machine State
         local WINSTATE=""
-        WINSTATE=$(virsh domstate "$VM_NAME" 2>&1 | xargs)
+        WINSTATE=$(virsh -c qemu:///system  domstate "$VM_NAME" 2>&1 | xargs)
 
         if grep -q "argument is empty" <<< "$WINSTATE"; then
             # Unspecified
@@ -303,9 +303,9 @@ export -f check_windows_exists
 function check_reachable() {
     # Only bother checking if Windows is reachable when using 'libvirt'.
     if [[ "$WAFLAVOR" == "libvirt" ]]; then
-        #VM_IP=$(virsh net-dhcp-leases default | grep "${VM_NAME}" | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}') # Unreliable since this does not always list VM
+        #VM_IP=$(virsh -c qemu:///system  net-dhcp-leases default | grep "${VM_NAME}" | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}') # Unreliable since this does not always list VM
         # shellcheck disable=SC2155 # Silence warning regarding declaring and assigning variables separately.
-        local VM_MAC=$(virsh domiflist "$VM_NAME" | grep -Eo '([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})') # Virtual Machine MAC Address
+        local VM_MAC=$(virsh -c qemu:///system  domiflist "$VM_NAME" | grep -Eo '([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})') # Virtual Machine MAC Address
         # shellcheck disable=SC2155 # Silence warning regarding declaring and assigning variables separately.
         local VM_IP=$(ip neigh show | grep "$VM_MAC" | grep -oE "([0-9]{1,3}\.){3}[0-9]{1,3}") # Virtual Machine IP Address
 
@@ -329,7 +329,7 @@ function generate_menu() {
     # Check Windows State
     if [[ "$WAFLAVOR" == "libvirt" ]]; then
         # Possible values are 'running', 'paused' and 'shut off'.
-        STATE=$(virsh domstate "$VM_NAME" 2>&1 | xargs)
+        STATE=$(virsh -c qemu:///system  domstate "$VM_NAME" 2>&1 | xargs)
 
         # Map state to standard terminology.
         if [[ "$STATE" == "running" ]]; then
@@ -414,7 +414,7 @@ export -f generate_menu
 function start_windows() {
     # Issue Command
     if [[ "$WAFLAVOR" == "libvirt" ]]; then
-        virsh start "$VM_NAME" &>/dev/null &
+        virsh -c qemu:///system  start "$VM_NAME" &>/dev/null &
         wait $!
         echo -e "${DEBUG_TEXT}> STARTED '${VM_NAME}'${RESET_TEXT}"
     elif [[ "$WAFLAVOR" == "podman" ]]; then
@@ -443,7 +443,7 @@ function stop_windows() {
     else
         # Issue Command
         if [[ "$WAFLAVOR" == "libvirt" ]]; then
-            virsh shutdown "$VM_NAME" &>/dev/null &
+            virsh -c qemu:///system  shutdown "$VM_NAME" &>/dev/null &
             wait $!
             echo -e "${DEBUG_TEXT}> POWERED OFF '${VM_NAME}'${RESET_TEXT}"
         elif [[ "$WAFLAVOR" == "podman" ]]; then
@@ -473,7 +473,7 @@ function pause_windows() {
     else
         # Issue Command
         if [[ "$WAFLAVOR" == "libvirt" ]]; then
-            virsh suspend "$VM_NAME" &>/dev/null &
+            virsh -c qemu:///system  suspend "$VM_NAME" &>/dev/null &
             wait $!
             echo -e "${DEBUG_TEXT}> PAUSED '${VM_NAME}'${RESET_TEXT}"
         elif [[ "$WAFLAVOR" == "podman" ]]; then
@@ -499,7 +499,7 @@ export -f pause_windows
 function resume_windows() {
     # Issue Command
     if [[ "$WAFLAVOR" == "libvirt" ]]; then
-        virsh resume "$VM_NAME" &>/dev/null &
+        virsh -c qemu:///system  resume "$VM_NAME" &>/dev/null &
         wait $!
         echo -e "${DEBUG_TEXT}> RESUMED '${VM_NAME}'${RESET_TEXT}"
     elif [[ "$WAFLAVOR" == "podman" ]]; then
@@ -524,7 +524,7 @@ export -f resume_windows
 function reset_windows() {
     # Issue Command
     if [[ "$WAFLAVOR" == "libvirt" ]]; then
-        virsh reset "$VM_NAME" &>/dev/null &
+        virsh -c qemu:///system  reset "$VM_NAME" &>/dev/null &
         wait $!
         echo -e "${DEBUG_TEXT}> RESET '${VM_NAME}'${RESET_TEXT}"
     elif [[ "$WAFLAVOR" == "podman" ]]; then
@@ -557,7 +557,7 @@ function reboot_windows() {
     else
         # Issue Command
         if [[ "$WAFLAVOR" == "libvirt" ]]; then
-            virsh reboot "$VM_NAME" &>/dev/null &
+            virsh -c qemu:///system  reboot "$VM_NAME" &>/dev/null &
             wait $!
             echo -e "${DEBUG_TEXT}> RESTARTED '${VM_NAME}'${RESET_TEXT}"
         elif [[ "$WAFLAVOR" == "podman" ]]; then
@@ -583,7 +583,7 @@ export -f reboot_windows
 function force_stop_windows() {
     # Issue Command
     if [[ "$WAFLAVOR" == "libvirt" ]]; then
-        virsh destroy "$VM_NAME" --graceful &>/dev/null &
+        virsh -c qemu:///system  destroy "$VM_NAME" --graceful &>/dev/null &
         wait $!
         echo -e "${DEBUG_TEXT}> FORCE STOPPED '${VM_NAME}'${RESET_TEXT}"
     elif [[ "$WAFLAVOR" == "podman" ]]; then
@@ -612,7 +612,7 @@ function hibernate_windows() {
     else
         # Issue Command
         if [[ "$WAFLAVOR" == "libvirt" ]]; then
-            virsh managedsave "$VM_NAME" &>/dev/null &
+            virsh -c qemu:///system  managedsave "$VM_NAME" &>/dev/null &
             wait $!
             echo -e "${DEBUG_TEXT}> HIBERNATED '${VM_NAME}'${RESET_TEXT}"
 
@@ -672,7 +672,7 @@ if ! command -v yad &> /dev/null; then
 fi
 
 # 'libvirt'
-if ! command -v virsh &> /dev/null; then
+if ! command -v virsh -c qemu:///system  &> /dev/null; then
     show_error_message "ERROR: 'libvirt' <u>NOT FOUND</u>.\nPlease ensure 'libvirt' is installed."
     exit "$EC_MISSING_DEP"
 fi
